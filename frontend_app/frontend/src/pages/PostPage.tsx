@@ -1,9 +1,9 @@
 import supabase from '../supabase/supabaseClient';
 import React, { useEffect, useState } from 'react'; 
-import { useParams } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom'; 
 import { fetchComments, addComment, updateComment, deleteComment } from '../api_calls/postApi';
 import axios from 'axios';
-
+import '../styles/PostPage.css'; 
 
 interface Post {
   id: number;
@@ -23,6 +23,7 @@ interface Comment {
 
 const PostPage: React.FC = () => {
   const { id } = useParams<{ id: string }>(); 
+  const navigate = useNavigate(); 
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -93,12 +94,18 @@ const PostPage: React.FC = () => {
     }
   };
 
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut(); 
+    navigate('/signup'); 
+  };
+
   if (loading) {
     return <p>Loading...</p>;
   }
 
   if (errorMessage) {
-    return <p style={{ color: 'red' }}>{errorMessage}</p>;
+    return <p className="error-message">{errorMessage}</p>;
   }
 
   if (!post) {
@@ -106,42 +113,49 @@ const PostPage: React.FC = () => {
   }
 
   return (
-    <div style={styles.container}>
-      <h1>{post.title}</h1>
-      <p>{post.content}</p>
-      <p style={styles.date}>{new Date(post.created_at).toLocaleDateString()}</p>
+    <div className="post-page-container">
+      <div className="header-buttons">
+        <button className="nav-button" onClick={handleLogout}>Log Out</button>
+        <br />
+        <Link to="/blog" className="nav-link">View All Posts</Link>
+      </div>
 
-      <h2>Comments</h2>
+      <h1 className="post-title">{post.title}</h1>
+      <p className="post-content">{post.content}</p>
+      <p className="post-date">{new Date(post.created_at).toLocaleDateString()}</p>
+
+      <h2 className="comments-title">Comments</h2>
       {comments.length === 0 ? (
         <p>No comments available.</p>
       ) : (
-        <ul style={styles.commentList}>
+        <ul className="comment-list">
           {comments.map((comment) => (
-            <li key={comment.id} style={styles.commentItem}>
+            <li key={comment.id} className="comment-item">
               {editingCommentId === comment.id ? (
-                <div>
+                <div className="comment-edit">
                   <input
                     type="text"
                     value={editingCommentContent}
                     onChange={(e) => setEditingCommentContent(e.target.value)} 
                     placeholder="Edit comment..."
+                    className="comment-input"
                   />
-                  <button onClick={() => handleEditComment(comment.id)}>Save</button>
-                  <button onClick={() => setEditingCommentId(null)}>Cancel</button>
+                  <button className="comment-button" onClick={() => handleEditComment(comment.id)}>Save</button>
+                  <button className="comment-button" onClick={() => setEditingCommentId(null)}>Cancel</button>
                 </div>
               ) : (
-                <div>
+                <div className="comment-content">
                   <p>{comment.content}</p>
-                  <p>{comment.user_email}</p>
-                  <p style={styles.commentDate}>{new Date(comment.created_at).toLocaleDateString()}</p>
+                  <p className="comment-user-email">{comment.user_email}</p>
+                  <p className="comment-date">{new Date(comment.created_at).toLocaleDateString()}</p>
                   {comment.user_id === userId && ( 
-                    <>
-                      <button onClick={() => {
+                    <div className="comment-actions">
+                      <button className="comment-button" onClick={() => {
                         setEditingCommentId(comment.id);
                         setEditingCommentContent(comment.content);
                       }}>Edit</button>
-                      <button onClick={() => handleDeleteComment(comment.id)}>Delete</button>
-                    </>
+                      <button className="comment-button" onClick={() => handleDeleteComment(comment.id)}>Delete</button>
+                    </div>
                   )}
                 </div>
               )}
@@ -150,43 +164,18 @@ const PostPage: React.FC = () => {
         </ul>
       )}
 
-      <input
-        type="text"
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)} 
-        placeholder="Write a comment..."
-      />
-      <button onClick={handleAddComment}>Add Comment</button>
+      <div className="add-comment-container">
+        <input
+          type="text"
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)} 
+          placeholder="Write a comment..."
+          className="comment-input"
+        />
+        <button className="comment-button" onClick={handleAddComment}>Add Comment</button>
+      </div>
     </div>
   );
-};
-
-// Stilovi
-const styles = {
-  container: {
-    maxWidth: '800px',
-    margin: '0 auto',
-    padding: '2rem',
-    textAlign: 'center' as const,
-  },
-  date: {
-    fontSize: '0.8rem',
-    color: '#888',
-  },
-  commentList: {
-    listStyleType: 'none' as const,
-    padding: 0,
-  },
-  commentItem: {
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    padding: '1rem',
-    marginBottom: '1rem',
-  },
-  commentDate: {
-    fontSize: '0.8rem',
-    color: '#888',
-  },
 };
 
 export default PostPage;

@@ -1,16 +1,17 @@
 const { z } = require('zod');
 
-// Shema za validaciju kreiranja posta
-const createPostSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+const postSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(100, 'Title cannot exceed 100 characters'),
   content: z.string().min(1, 'Content is required'),
-  user_id: z.string().uuid(),
+  user_id: z.string().uuid('Invalid user ID format'),
 });
 
-// Shema za validaciju ažuriranja posta
-const updatePostSchema = z.object({
-  title: z.string().optional(),
-  content: z.string().optional(),
-});
 
-module.exports = { createPostSchema, updatePostSchema };
+const validatePost = (data) => {
+  return postSchema.safeParse(data);
+};
+
+module.exports = 
+{
+  validatePost,
+};

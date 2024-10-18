@@ -1,0 +1,82 @@
+.auth-form {
+    width: fit-content;
+    background: rgb(214, 210, 210);
+    border-radius: 15px;
+    box-shadow: 0px 15px 20px rgba(0, 0, 0, 0.1);
+    padding: 10px 30px 50px 30px;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .auth-form .field {
+    position: relative;
+    margin-top: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .auth-form .field input {
+    width: 80%;
+    padding: 17px;
+    border: 1px solid lightgrey;
+    border-radius: 25px;
+    font-size: 17px;
+    outline: none;
+    transition: border-color 0.3s ease;
+  }
+  
+  .auth-form .field input:focus {
+    border-color: #4158d0;
+  }
+  
+  .auth-form .field label {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    color: #999;
+    transform: translateY(-50%);
+    pointer-events: none;
+    transition: all 0.3s ease;
+  }
+  
+  .auth-form .field input:focus ~ label,
+  .auth-form .field input:valid ~ label {
+    top: 0;
+    font-size: 16px;
+    color: #338c1a;
+    background: rgb(254, 254, 255);
+    padding: 0 10px;
+    transform: translateY(-50%);
+  }
+  
+  .auth-form .field input[type="submit"] {
+    color: rgb(10, 10, 10);
+    border: none;
+    background: linear-gradient(-135deg, #c850c0, #4158d0);
+    font-size: 20px;
+    cursor: pointer;
+    margin-top: 20px;
+    padding: 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .auth-form .field input[type="submit"]:hover {
+    transform: scale(0.95);
+  }
+  
+  .signup-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 16px;
+    color:gray;
+  }
+  
+  .signup-link a {
+    color: #4158d0;
+    text-decoration: none;
+  }
+  
+  .signup-link a:hover {
+    text-decoration: underline;
+  }
+  

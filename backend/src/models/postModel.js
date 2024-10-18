@@ -30,4 +30,11 @@ async function deletePost(id)
   return supabase.from('posts').delete().eq('id', id);
 }
 
-module.exports = { getAllPosts, getPostById, createPost, updatePost, deletePost };
+module.exports = 
+{ 
+  getAllPosts, 
+  getPostById, 
+  createPost, 
+  updatePost, 
+  deletePost 
+};

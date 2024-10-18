@@ -1,29 +1,34 @@
-import React, { useEffect, useState } from 'react';  
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; 
 import PostForm from '../components/PostForm';
 import { fetchPosts, addPost, updatePost, deletePost } from '../api_calls/postApi';
 import supabase from '../supabase/supabaseClient';
+import '../styles/BlogPage.css'; 
 
 interface Post {
   id: number;
   title: string;
   content: string;
   created_at: string;
-  user_id: string; 
+  user_id: string;
   user_email: string;
 }
 
 const BlogPage: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // Za trenutno prijavljenog korisnika
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const navigate = useNavigate(); 
 
   const loadPosts = async () => {
     try {
-      const data = await fetchPosts(); 
+      const data = await fetchPosts();
       setPosts(data);
+      setFilteredPosts(data);
     } catch (error) {
       setErrorMessage('There was an issue fetching posts.');
     }
@@ -34,52 +39,68 @@ const BlogPage: React.FC = () => {
     const fetchUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) {
-        setErrorMessage('Failed to get user information.');
+       // setErrorMessage('Failed to get user information.');
       }
       setCurrentUserId(user ? user.id : null);
     };
     fetchUser();
   }, []);
 
-  // Dodaj novi post
   const handleAddPost = async (data: { title: string; content: string }) => {
     try {
       if (!currentUserId) {
-        setErrorMessage('You must be logged in to add a post.'); // Da li je korisnik ulogovan
+        setErrorMessage('You must be logged in to add a post.');
         return;
       }
-
-      await addPost({ ...data, user_id: currentUserId }); 
-      loadPosts(); // Ponovo učitaj postove nakon dodavanja
-      setShowForm(false); // Sakrij formu
+      await addPost({ ...data, user_id: currentUserId });
+      loadPosts();
+      setShowForm(false);
     } catch (error) {
-      //setErrorMessage('There was an issue adding the post.');
+      setErrorMessage('There was an issue adding the post.');
     }
   };
 
-  // Ažuriraj post
   const handleEditPost = async (data: { title: string; content: string }) => {
     if (editingPost) {
       try {
         await updatePost(editingPost.id, data);
-        loadPosts(); // Ponovo učitaj postove nakon editovanja
-        setEditingPost(null); // Resetuj editovanje
-        setShowForm(false); // Sakrij formu
+        loadPosts();
+        setEditingPost(null);
+        setShowForm(false);
       } catch (error) {
         setErrorMessage('There was an issue updating the post.');
       }
     }
   };
 
-  // Obrisi post
   const handleDeletePost = async (id: number) => {
     try {
       await deletePost(id);
-      loadPosts(); // Ponovo učitaj postove nakon brisanja
+      loadPosts();
     } catch (error) {
       setErrorMessage('There was an issue deleting the post.');
     }
   };
+
+  // Debounce funkcija za pretragu
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchTerm) {
+        const filtered = posts.filter((post) =>
+          post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          post.content.toLowerCase().includes(searchTerm.toLowerCase()) 
+         
+        );
+        setFilteredPosts(filtered);
+      } else {
+        setFilteredPosts(posts);
+      }
+    }, 100); 
+
+    return () => {
+      clearTimeout(handler); 
+    };
+  }, [searchTerm, posts]);
 
   const handleEditClick = (post: Post) => {
     setEditingPost(post);
@@ -91,36 +112,62 @@ const BlogPage: React.FC = () => {
     setShowForm(false);
   };
 
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut(); 
+    navigate('/signup'); 
+  };
+
   return (
-    <div style={styles.container}>
-      <h1>Blog Posts</h1>
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+    <div className="blog-wrapper">
+      <div className="header-buttons">
+        <button className="nav-button" onClick={handleLogout}>Log Out</button>
+      </div>
+      <h1 className="blog-title">Blog Posts</h1>
+
+      {errorMessage && <p className="error-message">{errorMessage}</p>}
+
+      {/* Search bar */}
+      <input
+        type="text"
+        placeholder="Search posts by title or content"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="blog-search-bar"
+      />
+
       {showForm ? (
         <PostForm
           initialData={editingPost || { title: '', content: '' }}
           onSubmit={editingPost ? handleEditPost : handleAddPost}
           buttonText={editingPost ? 'Update Post' : 'Add Post'}
+          onClose={handleCancelEdit} 
         />
       ) : (
-        <button onClick={() => setShowForm(true)}>Add New Post</button>
+        <button className="add-post-button" onClick={() => setShowForm(true)}>
+          Add New Post
+        </button>
       )}
-      {posts.length === 0 ? (
+
+      {filteredPosts.length === 0 ? (
         <p>No posts available.</p>
       ) : (
-        <ul style={styles.postList}>
-          {posts.map((post) => (
-            <li key={post.id} style={styles.postItem}>
-              <Link to={`/post/${post.id}`} style={styles.link}>
+        <ul className="blog-post-list">
+          {filteredPosts.map((post) => (
+            <li key={post.id} className="blog-post-item">
+              <Link to={`/post/${post.id}`} className="blog-post-link">
                 <h2>{post.title}</h2>
                 <p>{post.user_email}</p>
                 <p>{post.content}</p>
-                <p style={styles.date}>{new Date(post.created_at).toLocaleDateString()}</p>
+                <p className="blog-post-date">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </p>
               </Link>
-              {post.user_id === currentUserId && ( // Da li je trenutni korisnik autor posta
-                <>
+              {post.user_id === currentUserId && (
+                <div className="blog-post-actions">
                   <button onClick={() => handleEditClick(post)}>Edit</button>
                   <button onClick={() => handleDeletePost(post.id)}>Delete</button>
-                </>
+                </div>
               )}
             </li>
           ))}
@@ -128,34 +175,6 @@ const BlogPage: React.FC = () => {
       )}
     </div>
   );
-};
-
-// Stilovi
-const styles = {
-  container: {
-    maxWidth: '800px',
-    margin: '0 auto',
-    padding: '2rem',
-    textAlign: 'center' as const,
-  },
-  postList: {
-    listStyleType: 'none' as const,
-    padding: 0,
-  },
-  postItem: {
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    padding: '1rem',
-    marginBottom: '1rem',
-  },
-  date: {
-    fontSize: '0.8rem',
-    color: '#888',
-  },
-  link: {
-    textDecoration: 'none',
-    color: 'inherit',
-  },
 };
 
 export default BlogPage;

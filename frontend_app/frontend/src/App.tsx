@@ -34,7 +34,6 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <div>
-        <h1>Testing App Component</h1>
         <Router>
           <Routes>
             <Route path="/" element={<Navigate to="/login" />} />

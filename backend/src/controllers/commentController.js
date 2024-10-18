@@ -5,33 +5,50 @@ const supabaseUrl = 'https://twblcijjauuhecvnsohs.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3YmxjaWpqYXV1aGVjdm5zb2hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg5MDE4NDMsImV4cCI6MjA0NDQ3Nzg0M30.HLrTDZfYuWe79KLkgmZtsWIGQ7tsokyYrP7xuPvDfZ8';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Kreiranje novog komentara za post
+
+const { createCommentSchema, updateCommentSchema } = require('../validation/commentValidation');
+
+
 exports.createComment = async (req, res) => {
-  const { id } = req.params; // Post ID
-  const { user_id, content } = req.body; // Podaci o komentaru
+  const { id } = req.params; 
+  const { user_id, content } = req.body; 
+
+  console.log('Post ID:', id);
+  console.log('User ID:', user_id);
+  console.log('Comment Content:', content);
 
   try {
+    // Validacija podataka
+    const validation = createCommentSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors });
+    }
+
     const { error } = await supabase
       .from('comments')
       .insert([{ post_id: id, user_id, content }]);
 
     if (error) {
+      console.error('Supabase Error:', error);
       return res.status(500).json({ error: error.message });
     }
+
     res.status(204).end();
   } catch (err) {
+    console.error('Server Error:', err);
     res.status(500).json({ error: 'Server error.' });
   }
 };
 
 
-// Dobijanje svih komentara za post sa email-om korisnika
+
+
+
 exports.getComments = async (req, res) => {
   const { id } = req.params; // Post ID
 
   try 
   {
-
     const { data: comments, error: commentsError } = await supabase
       .from('comments')
       .select('*')
@@ -72,27 +89,30 @@ exports.getComments = async (req, res) => {
 
 
 
-// Ažuriranje komentara
 exports.updateComment = async (req, res) => {
   const { commentId } = req.params;
   const { content } = req.body; // Novi sadržaj komentara
 
-  try 
-  {
+  try {
+    // Validacija podataka
+    const validation = updateCommentSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors });
+    }
+
     const { data, error } = await supabase
       .from('comments')
       .update({ content })
       .eq('id', commentId);
 
-    if (error) 
-      {
+    if (error) {
+      console.error('Supabase Error:', error);
       return res.status(500).json({ error: error.message });
     }
 
     res.status(204).send(); 
-  } 
-  catch (err) 
-  {
+  } catch (err) {
+    console.error('Server Error:', err);
     res.status(500).json({ error: 'Server error.' });
   }
 };
