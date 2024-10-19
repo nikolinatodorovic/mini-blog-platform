@@ -53,6 +53,7 @@ The following API endpoints are provided:
    npm install
    cd ../backend
    npm install
+   npm install -g nodemon
 
 2. **Install Dependencies for Frontend and Backend**
    ```bash

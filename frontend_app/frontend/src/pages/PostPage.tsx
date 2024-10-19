@@ -35,7 +35,7 @@ const PostPage: React.FC = () => {
   const { data: post, isError: isPostError } = useQuery<Post, Error>({
     queryKey: ['post', id],
     queryFn: async () => {
-      const response = await fetch(`http://localhost:3000/api/posts/${id}`);
+      const response = await fetch(`https://mini-blog-backend-production.up.railway.app/api/posts/${id}`);
       if (!response.ok) throw new Error('Error fetching post');
       return response.json();
     },
