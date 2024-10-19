@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000/api/posts';
+//const API_BASE_URL = 'http://localhost:3000/api/posts';
+const API_BASE_URL = 'https://mini-blog-backend-production.up.railway.app/api/posts';
 
 // Dodavanje novog posta
 export const addPost = async (data: { user_id: string; title: string; content: string }) => {
