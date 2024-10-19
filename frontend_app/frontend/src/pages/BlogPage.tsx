@@ -24,6 +24,9 @@ const BlogPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient(); 
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 3;
+
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -43,6 +46,13 @@ const BlogPage: React.FC = () => {
   useEffect(() => {
     setFilteredPosts(posts);
   }, [posts]);
+
+  // Paginacija logika
+  const indexOfLastPost = currentPage * postsPerPage;
+  const indexOfFirstPost = indexOfLastPost - postsPerPage;
+  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
+  const totalPosts = filteredPosts.length;
+  const totalPages = Math.ceil(totalPosts / postsPerPage);
 
   const addPostMutation = useMutation({
     mutationFn: (newPost: { title: string; content: string; user_id: string }) => addPost(newPost),
@@ -129,11 +139,23 @@ const BlogPage: React.FC = () => {
     navigate('/signup'); 
   };
 
+  // Paginacija kontrole
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   return (
     <div className="blog-wrapper">
       <div className="header-buttons">
         <button className="nav-button" onClick={handleLogout}>Log Out</button>
-        
       </div>
       <h1 className="blog-title">Blog Posts</h1>
 
@@ -160,32 +182,41 @@ const BlogPage: React.FC = () => {
         </button>
       )}
 
-{filteredPosts.length === 0 ? (
-  <p>No posts available.</p>
-) : (
-  <ul className="blog-post-list">
-    {filteredPosts.map((post) => (
-      <li key={post.id} className="blog-post-item">
-        <Link to={`/post/${post.id}`} className="blog-post-link">
-          <h2>{post.title}</h2>
-          <p>{post.user_email}</p>
-          {/* Truncate content to a certain length */}
-          <p>{post.content.length > 100 ? `${post.content.slice(0, 100)}...` : post.content}</p>
-          <Link to={`/post/${post.id}`} className="read-more-link">Read More</Link>
-          <p className="blog-post-date">
-            {new Date(post.created_at).toLocaleDateString()}
-          </p>
-        </Link>
-        {post.user_id === currentUserId && (
-          <div className="blog-post-actions">
-            <button onClick={() => handleEditClick(post)}>Edit</button>
-            <button onClick={() => handleDeletePost(post.id)}>Delete</button>
-          </div>
-        )}
-      </li>
-    ))}
-  </ul>
-)}
+      {currentPosts.length === 0 ? (
+        <p>No posts available.</p>
+      ) : (
+        <ul className="blog-post-list">
+          {currentPosts.map((post) => (
+            <li key={post.id} className="blog-post-item">
+              <Link to={`/post/${post.id}`} className="blog-post-link">
+                <h2>{post.title}</h2>
+                <p>{post.user_email}</p>
+                <p>{post.content.length > 100 ? `${post.content.slice(0, 100)}...` : post.content}</p>
+                <Link to={`/post/${post.id}`} className="read-more-link">Read More</Link>
+                <p className="blog-post-date">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </p>
+              </Link>
+              {post.user_id === currentUserId && (
+                <div className="blog-post-actions">
+                  <button onClick={() => handleEditClick(post)}>Edit</button>
+                  <button onClick={() => handleDeletePost(post.id)}>Delete</button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="pagination-controls">
+        <button onClick={handlePreviousPage} disabled={currentPage === 1}>
+          Previous
+        </button>
+        <span>Page {currentPage} of {totalPages}</span>
+        <button onClick={handleNextPage} disabled={currentPage === totalPages}>
+          Next
+        </button>
+      </div>
 
     </div>
   );

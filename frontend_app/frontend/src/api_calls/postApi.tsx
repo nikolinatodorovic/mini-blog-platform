@@ -18,7 +18,7 @@ export const fetchPosts = async () => {
     const response = await axios.get(API_BASE_URL); // Poziva GET /api/posts
     return response.data;
   } catch (error) {
-    throw new Error('Error fetching posts');
+   // throw new Error('Error fetching posts');
   }
 };
 
