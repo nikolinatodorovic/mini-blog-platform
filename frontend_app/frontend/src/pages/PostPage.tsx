@@ -65,6 +65,7 @@ const PostPage: React.FC = () => {
     },
     onError: (error) => {
       setErrorMessage('Error adding comment');
+      console.log(errorMessage);
       console.error(error);
     },
   });

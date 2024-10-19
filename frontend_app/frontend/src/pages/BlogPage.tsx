@@ -38,7 +38,7 @@ const BlogPage: React.FC = () => {
     fetchUser();
   }, []);
 
-  const { data: posts = [], isError, error } = useQuery<Post[], Error>({
+  const { data: posts = [], error } = useQuery<Post[], Error>({
     queryKey: ['posts'], 
     queryFn: fetchPosts,
   });
