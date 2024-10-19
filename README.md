@@ -47,7 +47,7 @@ The following API endpoints are provided:
 
 1. **Clone the Repository and Install Dependencies**
    ```bash
-   git clone https://github.com/yourusername/mini-blog.git
+   git clone https://github.com/nikolinatodorovic/mini-blog-platform
    cd mini-blog
    cd frontend_app/frontend
    npm install
