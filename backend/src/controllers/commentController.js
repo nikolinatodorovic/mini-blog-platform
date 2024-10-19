@@ -11,14 +11,14 @@ const { createCommentSchema, updateCommentSchema } = require('../validation/comm
 
 exports.createComment = async (req, res) => {
   const { id } = req.params; 
-  const { user_id, content } = req.body; 
+  const { user_id, content, user_email } = req.body; 
 
   console.log('Post ID:', id);
   console.log('User ID:', user_id);
   console.log('Comment Content:', content);
 
+
   try {
-    // Validacija podataka
     const validation = createCommentSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.errors });

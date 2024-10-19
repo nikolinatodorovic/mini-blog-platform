@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 import PostForm from '../components/PostForm';
 import { fetchPosts, addPost, updatePost, deletePost } from '../api_calls/postApi';
 import supabase from '../supabase/supabaseClient';
@@ -15,87 +16,98 @@ interface Post {
 }
 
 const BlogPage: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const navigate = useNavigate(); 
-
-  const loadPosts = async () => {
-    try {
-      const data = await fetchPosts();
-      setPosts(data);
-      setFilteredPosts(data);
-    } catch (error) {
-      setErrorMessage('There was an issue fetching posts.');
-    }
-  };
+  const navigate = useNavigate();
+  const queryClient = useQueryClient(); 
 
   useEffect(() => {
-    loadPosts();
     const fetchUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) {
-       // setErrorMessage('Failed to get user information.');
+        console.log('Error fetching user info:', error.message);
       }
       setCurrentUserId(user ? user.id : null);
     };
     fetchUser();
   }, []);
 
-  const handleAddPost = async (data: { title: string; content: string }) => {
-    try {
-      if (!currentUserId) {
-        setErrorMessage('You must be logged in to add a post.');
-        return;
-      }
-      await addPost({ ...data, user_id: currentUserId });
-      loadPosts();
+  const { data: posts = [], isError, error } = useQuery<Post[], Error>({
+    queryKey: ['posts'], 
+    queryFn: fetchPosts,
+  });
+
+  useEffect(() => {
+    setFilteredPosts(posts);
+  }, [posts]);
+
+  const addPostMutation = useMutation({
+    mutationFn: (newPost: { title: string; content: string; user_id: string }) => addPost(newPost),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       setShowForm(false);
-    } catch (error) {
-      setErrorMessage('There was an issue adding the post.');
+    },
+    onError: (error) => {
+      console.log('Error adding post:', error);
     }
+  });
+
+  const updatePostMutation = useMutation({
+    mutationFn: (updatedPost: { id: number; title: string; content: string }) => 
+      updatePost(updatedPost.id, { title: updatedPost.title, content: updatedPost.content }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      setEditingPost(null);
+      setShowForm(false);
+    },
+    onError: (error) => {
+      console.log('Error updating post:', error);
+    }
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: (id: number) => deletePost(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+    onError: (error) => {
+      console.log('Error deleting post:', error);
+    }
+  });
+
+  const handleAddPost = async (data: { title: string; content: string }) => {
+    if (!currentUserId) {
+      console.log('User is not logged in');
+      return;
+    }
+    addPostMutation.mutate({ title: data.title, content: data.content, user_id: currentUserId });
   };
 
   const handleEditPost = async (data: { title: string; content: string }) => {
     if (editingPost) {
-      try {
-        await updatePost(editingPost.id, data);
-        loadPosts();
-        setEditingPost(null);
-        setShowForm(false);
-      } catch (error) {
-        setErrorMessage('There was an issue updating the post.');
-      }
+      updatePostMutation.mutate({ id: editingPost.id, title: data.title, content: data.content });
     }
   };
 
-  const handleDeletePost = async (id: number) => {
-    try {
-      await deletePost(id);
-      loadPosts();
-    } catch (error) {
-      setErrorMessage('There was an issue deleting the post.');
-    }
+  const handleDeletePost = (id: number) => {
+    deletePostMutation.mutate(id);
   };
 
-  // Debounce funkcija za pretragu
   useEffect(() => {
     const handler = setTimeout(() => {
       if (searchTerm) {
         const filtered = posts.filter((post) =>
           post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           post.content.toLowerCase().includes(searchTerm.toLowerCase()) 
-         
         );
         setFilteredPosts(filtered);
       } else {
         setFilteredPosts(posts);
       }
-    }, 100); 
+    }, 300); 
 
     return () => {
       clearTimeout(handler); 
@@ -112,7 +124,6 @@ const BlogPage: React.FC = () => {
     setShowForm(false);
   };
 
-
   const handleLogout = async () => {
     await supabase.auth.signOut(); 
     navigate('/signup'); 
@@ -122,12 +133,12 @@ const BlogPage: React.FC = () => {
     <div className="blog-wrapper">
       <div className="header-buttons">
         <button className="nav-button" onClick={handleLogout}>Log Out</button>
+        
       </div>
       <h1 className="blog-title">Blog Posts</h1>
 
-      {errorMessage && <p className="error-message">{errorMessage}</p>}
+      {error && <p className="error-message">{error.message}</p>}
 
-      {/* Search bar */}
       <input
         type="text"
         placeholder="Search posts by title or content"
@@ -149,30 +160,33 @@ const BlogPage: React.FC = () => {
         </button>
       )}
 
-      {filteredPosts.length === 0 ? (
-        <p>No posts available.</p>
-      ) : (
-        <ul className="blog-post-list">
-          {filteredPosts.map((post) => (
-            <li key={post.id} className="blog-post-item">
-              <Link to={`/post/${post.id}`} className="blog-post-link">
-                <h2>{post.title}</h2>
-                <p>{post.user_email}</p>
-                <p>{post.content}</p>
-                <p className="blog-post-date">
-                  {new Date(post.created_at).toLocaleDateString()}
-                </p>
-              </Link>
-              {post.user_id === currentUserId && (
-                <div className="blog-post-actions">
-                  <button onClick={() => handleEditClick(post)}>Edit</button>
-                  <button onClick={() => handleDeletePost(post.id)}>Delete</button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+{filteredPosts.length === 0 ? (
+  <p>No posts available.</p>
+) : (
+  <ul className="blog-post-list">
+    {filteredPosts.map((post) => (
+      <li key={post.id} className="blog-post-item">
+        <Link to={`/post/${post.id}`} className="blog-post-link">
+          <h2>{post.title}</h2>
+          <p>{post.user_email}</p>
+          {/* Truncate content to a certain length */}
+          <p>{post.content.length > 100 ? `${post.content.slice(0, 100)}...` : post.content}</p>
+          <Link to={`/post/${post.id}`} className="read-more-link">Read More</Link>
+          <p className="blog-post-date">
+            {new Date(post.created_at).toLocaleDateString()}
+          </p>
+        </Link>
+        {post.user_id === currentUserId && (
+          <div className="blog-post-actions">
+            <button onClick={() => handleEditClick(post)}>Edit</button>
+            <button onClick={() => handleDeletePost(post.id)}>Delete</button>
+          </div>
+        )}
+      </li>
+    ))}
+  </ul>
+)}
+
     </div>
   );
 };

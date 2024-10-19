@@ -1,9 +1,9 @@
-import supabase from '../supabase/supabaseClient';
-import React, { useEffect, useState } from 'react'; 
-import { useParams, Link, useNavigate } from 'react-router-dom'; 
+import React, { useEffect, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchComments, addComment, updateComment, deleteComment } from '../api_calls/postApi';
-import axios from 'axios';
-import '../styles/PostPage.css'; 
+import supabase from '../supabase/supabaseClient';
+import '../styles/PostPage.css';
 
 interface Post {
   id: number;
@@ -22,90 +22,96 @@ interface Comment {
 }
 
 const PostPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>(); 
-  const navigate = useNavigate(); 
-  const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState<string>('');
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState<string>('');
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Fetch post data
+  const { data: post, isError: isPostError } = useQuery<Post, Error>({
+    queryKey: ['post', id],
+    queryFn: async () => {
+      const response = await fetch(`http://localhost:3000/api/posts/${id}`);
+      if (!response.ok) throw new Error('Error fetching post');
+      return response.json();
+    },
+  });
+
+  // Fetch comments
+  const { data: comments = [], isError: isCommentsError } = useQuery<Comment[], Error>({
+    queryKey: ['comments', id],
+    queryFn: () => fetchComments(Number(id)),
+  });
+
   useEffect(() => {
-    const fetchPostAndComments = async () => {
-      try {
-        setLoading(true);
-        
-        const postResponse = await axios.get(`http://localhost:3000/api/posts/${id}`);
-        setPost(postResponse.data);
-        
-        const commentsData = await fetchComments(Number(id));
-        setComments(commentsData);
-
-        const { data, error } = await supabase.auth.getUser();
-        if (error) throw error; 
-        setUserId(data?.user?.id || null); 
-      } catch (error) {
-        setErrorMessage('Error loading post or comments');
-      } finally {
-        setLoading(false);
-      }
+    const fetchUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      setUserId(data?.user?.id || null);
     };
+    fetchUser();
+  }, []);
 
-    fetchPostAndComments();
-  }, [id]);
-
-  const handleAddComment = async () => {
-    if (!newComment.trim() || !userId) return; 
-
-    try {
-      await addComment(Number(id), { user_id: userId, content: newComment });
-      const updatedComments = await fetchComments(Number(id));
-      setComments(updatedComments);
-      setNewComment(''); 
-    } catch (error) {
+  const addCommentMutation = useMutation({
+    mutationFn: (newComment: { user_id: string; content: string }) => 
+      addComment(Number(id), newComment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', id] });
+      setNewComment('');
+    },
+    onError: (error) => {
       setErrorMessage('Error adding comment');
-    }
+      console.error(error);
+    },
+  });
+
+  const updateCommentMutation = useMutation({
+    mutationFn: (comment: { commentId: number; content: string }) => 
+      updateComment(Number(id), comment.commentId, { content: comment.content }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', id] });
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+    },
+    onError: (error) => {
+      setErrorMessage('Error updating comment');
+      console.error(error);
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: number) => deleteComment(Number(id), commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', id] });
+    },
+    onError: (error) => {
+      setErrorMessage('Error deleting comment');
+      console.error(error);
+    },
+  });
+
+  const handleAddComment = () => {
+    if (!newComment.trim() || !userId) return;
+
+    addCommentMutation.mutate({ user_id: userId, content: newComment });
   };
 
-  const handleEditComment = async (commentId: number) => {
+  const handleEditComment = (commentId: number) => {
     if (!editingCommentContent.trim()) return;
 
-    try {
-      await updateComment(Number(id), commentId, { content: editingCommentContent });
-      const updatedComments = await fetchComments(Number(id));
-      setComments(updatedComments);
-      setEditingCommentId(null); 
-      setEditingCommentContent(''); 
-    } catch (error) {
-      setErrorMessage('Error updating comment');
-    }
+    updateCommentMutation.mutate({ commentId, content: editingCommentContent });
   };
 
-  const handleDeleteComment = async (commentId: number) => {
-    try {
-      await deleteComment(Number(id), commentId);
-      const updatedComments = await fetchComments(Number(id));
-      setComments(updatedComments);
-    } catch (error) {
-      setErrorMessage('Error deleting comment');
-    }
+  const handleDeleteComment = (commentId: number) => {
+    deleteCommentMutation.mutate(commentId);
   };
 
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut(); 
-    navigate('/signup'); 
-  };
-
-  if (loading) {
-    return <p>Loading...</p>;
-  }
-
-  if (errorMessage) {
-    return <p className="error-message">{errorMessage}</p>;
+  if (isPostError || isCommentsError) {
+    return <p className="error-message">Error loading post or comments</p>;
   }
 
   if (!post) {
@@ -115,13 +121,14 @@ const PostPage: React.FC = () => {
   return (
     <div className="post-page-container">
       <div className="header-buttons">
-        <button className="nav-button" onClick={handleLogout}>Log Out</button>
+        <button className="nav-button" onClick={() => navigate('/signup')}>Log Out</button>
         <br />
         <Link to="/blog" className="nav-link">View All Posts</Link>
       </div>
 
       <h1 className="post-title">{post.title}</h1>
       <p className="post-content">{post.content}</p>
+      
       <p className="post-date">{new Date(post.created_at).toLocaleDateString()}</p>
 
       <h2 className="comments-title">Comments</h2>
@@ -136,7 +143,7 @@ const PostPage: React.FC = () => {
                   <input
                     type="text"
                     value={editingCommentContent}
-                    onChange={(e) => setEditingCommentContent(e.target.value)} 
+                    onChange={(e) => setEditingCommentContent(e.target.value)}
                     placeholder="Edit comment..."
                     className="comment-input"
                   />
@@ -148,7 +155,7 @@ const PostPage: React.FC = () => {
                   <p>{comment.content}</p>
                   <p className="comment-user-email">{comment.user_email}</p>
                   <p className="comment-date">{new Date(comment.created_at).toLocaleDateString()}</p>
-                  {comment.user_id === userId && ( 
+                  {comment.user_id === userId && (
                     <div className="comment-actions">
                       <button className="comment-button" onClick={() => {
                         setEditingCommentId(comment.id);
@@ -168,7 +175,7 @@ const PostPage: React.FC = () => {
         <input
           type="text"
           value={newComment}
-          onChange={(e) => setNewComment(e.target.value)} 
+          onChange={(e) => setNewComment(e.target.value)}
           placeholder="Write a comment..."
           className="comment-input"
         />

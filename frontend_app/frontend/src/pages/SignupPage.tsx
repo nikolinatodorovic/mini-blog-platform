@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AuthForm from '../components/AuthForm';
 import supabase from '../supabase/supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import '../styles/SignupPage.css'; 
+import '../styles/SignupPage.css';
 
 const SignupPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -10,7 +10,7 @@ const SignupPage: React.FC = () => {
 
   const handleSignupSubmit = async (formData: { fullName?: string; email: string; password: string }) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error: signupError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -20,11 +20,24 @@ const SignupPage: React.FC = () => {
         },
       });
 
-      if (error) {
-        setErrorMessage(error.message);
-      } else {
-        navigate('/login');
+      if (signupError) {
+        setErrorMessage(signupError.message);
+        return;
       }
+      const user = data.user; 
+
+      if (user) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ id: user.id, email: formData.email }]);
+
+        if (insertError) {
+          console.error('Error inserting user into database:', insertError);
+          setErrorMessage('Failed to save user data. Please try again.');
+          return;
+        }
+      }
+      navigate('/login');
     } catch (err) {
       console.error('Error signing up:', err);
       setErrorMessage('There was an issue signing up. Please try again.');

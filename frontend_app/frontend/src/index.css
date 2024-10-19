@@ -12,6 +12,10 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+input, textarea {
+  background-color: rgb(226, 230, 230);
+  color: black;
+}
 
 a {
   font-weight: 500;
