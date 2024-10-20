@@ -48,21 +48,14 @@ The following API endpoints are provided:
 1. **Clone the Repository and Install Dependencies**
    ```bash
    git clone https://github.com/nikolinatodorovic/mini-blog-platform
-   cd mini-blog
+   cd mini-blog-platform
    cd frontend_app/frontend
    npm install
-   cd ../backend
-   npm install
-   npm install -g nodemon
 
-2. **Install Dependencies for Frontend and Backend**
-   ```bash
-   cd frontend_app/frontend
-   npm install
    cd ../backend
    npm install
 
-3. **Run the Frontend and Backend Servers**
+2. **Run the Frontend and Backend Servers locally**
    - **Frontend:** 
      ```bash
      cd frontend_app/frontend
@@ -77,7 +70,7 @@ The following API endpoints are provided:
 ## Deployment
 
  ### Live link for deployed React + Vite + Typescript platform
- mini-blog-platform-sdde-bph4e5j89-nikolina-todorovics-projects.vercel.app
+ Type following path in your browser: mini-blog-platform-sdde-bph4e5j89-nikolina-todorovics-projects.vercel.app
  
  ### Link for deployed backedn API endpoints
  Basic URL: https://mini-blog-backend-production.up.railway.app/. Try out any endpoint by adding route extension to this basic URL. For example, to see all posts, you can visit: https://mini-blog-backend-production.up.railway.app/api/posts. 
