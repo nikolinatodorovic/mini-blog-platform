@@ -31,11 +31,14 @@ const PostPage: React.FC = () => {
   const [editingCommentContent, setEditingCommentContent] = useState<string>('');
   const [userId, setUserId] = useState<string | null>(null);
 
+   //const API_BASE_URL = 'http://localhost:3000/api/posts';
+    const API_BASE_URL = 'https://mini-blog-backend-production.up.railway.app/api/posts';
+
   // Fetch post data
   const { data: post, isError: isPostError } = useQuery<Post, Error>({
     queryKey: ['post', id],
     queryFn: async () => {
-      const response = await fetch(`https://mini-blog-backend-production.up.railway.app/api/posts/${id}`);
+       const response = await fetch(`${API_BASE_URL}/${id}`);
       if (!response.ok) throw new Error('Error fetching post');
       return response.json();
     },

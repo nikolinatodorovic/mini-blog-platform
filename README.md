@@ -74,3 +74,13 @@ The following API endpoints are provided:
      nodemon src/index.js
      ```
 
+## Deployment
+
+ ### Live link for deployed React + Vite + Typescript platform
+ mini-blog-platform-sdde-bph4e5j89-nikolina-todorovics-projects.vercel.app
+ 
+ ### Link for deployed backedn API endpoints
+ Basic URL: https://mini-blog-backend-production.up.railway.app/. Try out any endpoint by adding route extension to this basic URL. For example, to see all posts, you can visit: https://mini-blog-backend-production.up.railway.app/api/posts. 
+
+   
+

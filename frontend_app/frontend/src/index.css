@@ -17,6 +17,12 @@ input, textarea {
   color: black;
 }
 
+span
+{
+  color: #1a1a1a;
+  padding: 10px;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
